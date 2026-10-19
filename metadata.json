@@ -1,0 +1,6 @@
+{
+  "name": "AlloySynth HTE - Agentic Materials Workflow",
+  "description": "Agentic AI-driven experimental workflow platform for high-throughput nanoparticle printing, micro-XRF mapping, SEM morphology metrology, reproducible Python pipelines, and FAIR-aligned realizability datasets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
