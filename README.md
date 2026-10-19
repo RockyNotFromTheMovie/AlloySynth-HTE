@@ -20,6 +20,19 @@ AlloySynth HTE connects AI agents directly to the laboratory synthesis, metrolog
    [Quaternary Gradients]            [Piezoelectric DoD]               [EDS & Radial Profiler]            [Positive/Negative Labels]
 ```
 
+## Primary Navigation Structure
+
+The top navigation bar provides immediate access to the entire experimental workflow in systematic order:
+
+1. **Periodic Table (118)**: Standard 118-element reference library for formulating new binary to quinary alloy compositions with 2–5 element guardrails.
+2. **Library Grid**: Interactive 8×8 combinatorial wafer substrate with stoichiometry heatmaps, SNR metrics, and point selection.
+3. **Nanoparticle Printer**: Digital twin simulation with piezoelectric pulse telemetry, thermal platen control, and G-code generation.
+4. **Micro-XRF & SEM**: Simultaneous elemental EDS peak analysis and SEM morphology inspection (grain size, porosity, radial segregation).
+5. **Python Pipelines**: Reproducible Pyodide WASM scientific scripts (`xrf_quant.py`, `homogeneity_sem.py`, `fair_curate_pipeline.py`).
+6. **FAIR Dataset**: Structured dataset repository with realizability status breakdown, Schema.org JSON-LD viewer, and CSV lineage export.
+7. **Agent QC Scan**: Autonomous multi-agent scan across all 64 coordinates evaluating compositional deviation and defect labels.
+8. **Export FAIR Bundle**: Downloadable archive package with measurements CSV, semantic metadata JSON-LD, and G-code toolpaths.
+
 ---
 
 ## Key Modules & Features
@@ -65,10 +78,20 @@ AlloySynth HTE connects AI agents directly to the laboratory synthesis, metrolog
   - Full CSV dataset containing coordinate metadata, printer parameters, analytical metrics, and realizability labels.
   - End-to-end cryptographic provenance lineage (SHA-256 toolpath hashes).
 
-### 6. Human-in-the-Loop Quality Control Gates
+### 6. Human-in-the-Loop Quality Control Gates & Synthesis History
 - Stage-gate approvals between composition proposal, print compilation, metrology inspection, and dataset commitment.
 - Multi-agent diagnostic review panel powered by the **Candidate Scout**, **Print Planner**, **Metrology QC**, and **FAIR Curator** agents.
-- Scientist sign-off interface with manual verdict overrides and audit logging.
+- Scientist sign-off interface with manual verdict overrides and inline feedback.
+- **Synthesis History Audit Trail**: Chronological event log of all agent-initiated printing, metrology inspections, and QC actions for the active library, embedded within the Agent Control Panel with category filters, search, and CSV/JSON export.
+
+### 7. Standard 118-Element Periodic Table Reference Library
+- **Immediate Out-of-the-Box Formulation**: Test and synthesize any binary, ternary, quaternary, or quinary alloy system without uploading data files.
+- **Real-Time Multi-Parameter Search**: Instant search by chemical symbol (e.g. `Pt`, `Co`, `Ti`), element name, atomic number $Z$, or periodic block ($s, p, d, f$).
+- **Strict 2–5 Element Selection Guardrails**:
+  - Live element counters with 5-slot progress indicators and dynamic validation status badges (`Binary`, `Ternary Simplex`, `Quaternary`, `Quinary High-Entropy`).
+  - Interactive checkboxes on every element tile with automatic disability once the 5-element ceiling is reached.
+  - Curated quick presets including Pt-Pd-Ni-Co ORR catalyst, Cantor High-Entropy Alloy (Fe-Co-Ni-Cr-Mn), Titanium Aerospace (Ti-Al-V-Fe), and Alkaline HER (Ni-Mo-Fe).
+  - Dynamic 64-spot combinatorial gradient calculation with realistic micro-XRF peak lines and SEM morphology characteristics upon synthesis.
 
 ---
 
@@ -147,12 +170,16 @@ npm start
     │   ├── LibraryMatrixView.tsx # 8x8 wafer stage, multi-mode heatmaps & telemetry
     │   ├── MicroXRFStudio.tsx    # Micro-XRF raster mapping & 2048-channel EDS spectrum
     │   ├── Navigation.tsx        # 3-zone top navigation bar
+    │   ├── PeriodicTableSelector.tsx # 118-element periodic reference library modal
     │   ├── PrinterStudio.tsx     # Nanoparticle printer digital twin & G-code viewer
     │   ├── PythonPipelineStudio.tsx # In-browser Python editor & terminal console
     │   ├── SEMStudio.tsx         # SEM secondary electron viewer & radial profiler
-    │   └── SpotDetailDrawer.tsx  # Deep inspection slide-over drawer
+    │   ├── SpotDetailDrawer.tsx  # Deep inspection slide-over drawer
+    │   └── SynthesisHistory.tsx  # Chronological log of agent printing & QC actions
     ├── data/
-    │   └── defaultLibrary.ts     # 64-spot combinatorial Pt-Pd-Ni-Co dataset generator
+    │   ├── defaultLibrary.ts     # 64-spot combinatorial Pt-Pd-Ni-Co dataset generator
+    │   ├── defaultSynthesisHistory.ts # Initial chronological synthesis & QC audit trail
+    │   └── periodicTable.ts      # 118-element standard periodic table database & presets
     ├── services/
     │   ├── fairExporter.ts       # Schema.org JSON-LD, CSV and file downloads
     │   ├── gcodeCompiler.ts      # Multi-axis CNC G-code toolpath compiler

@@ -10,7 +10,7 @@ import { X, ExternalLink, ShieldCheck, CheckCircle2, AlertTriangle, AlertOctagon
 interface SpotDetailDrawerProps {
   spot: SampleSpot | null;
   onClose: () => void;
-  onNavigateToTab: (tab: 'matrix' | 'printer' | 'characterization' | 'python' | 'fair') => void;
+  onNavigateToTab: (tab: 'periodic' | 'matrix' | 'printer' | 'characterization' | 'python' | 'fair') => void;
 }
 
 export const SpotDetailDrawer: React.FC<SpotDetailDrawerProps> = ({

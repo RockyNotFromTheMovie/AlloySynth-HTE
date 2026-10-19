@@ -8,6 +8,7 @@ export interface ElementalComposition {
   pd: number;
   ni: number;
   co: number;
+  [elementSymbol: string]: number;
 }
 
 export type RealizabilityLabel =
@@ -35,8 +36,8 @@ export interface MicroXRFChannelData {
   energyKev: number[];
   intensityCounts: number[];
   fittedPeaks: {
-    element: 'Pt' | 'Pd' | 'Ni' | 'Co';
-    line: 'Lα' | 'Kα' | 'Lβ';
+    element: string;
+    line: string;
     centroidKev: number;
     netArea: number;
   }[];
@@ -101,6 +102,7 @@ export interface MaterialLibrary {
   rows: number;
   cols: number;
   spots: SampleSpot[];
+  elements?: string[];
   createdAt: string;
   updatedAt: string;
   gcodeScript?: string;
@@ -126,3 +128,17 @@ export interface PythonPipelineScript {
   lastRunStatus?: 'idle' | 'running' | 'success' | 'error';
   lastRunMetrics?: Record<string, number | string>;
 }
+
+export interface SynthesisLogEntry {
+  id: string;
+  timestamp: string;
+  agentRole: 'Candidate Scout' | 'Print Planner' | 'Metrology QC' | 'FAIR Curator' | 'Human Scientist';
+  actionCategory: 'printing' | 'qc' | 'scout' | 'fair';
+  actionType: string;
+  spotId?: string;
+  title: string;
+  detail: string;
+  metrics?: Record<string, string | number>;
+  status: 'optimal' | 'warning' | 'alert' | 'info';
+}
+

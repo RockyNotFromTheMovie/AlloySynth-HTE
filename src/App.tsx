@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { MaterialLibrary, SampleSpot, RealizabilityLabel } from './types/materials';
+import { MaterialLibrary, SampleSpot, RealizabilityLabel, SynthesisLogEntry } from './types/materials';
 import { createQuaternaryElectrocatalystLibrary } from './data/defaultLibrary';
+import { createInitialSynthesisHistory } from './data/defaultSynthesisHistory';
 import { Navigation } from './components/Navigation';
 import { LibraryMatrixView } from './components/LibraryMatrixView';
 import { PrinterStudio } from './components/PrinterStudio';
@@ -15,6 +16,9 @@ import { PythonPipelineStudio } from './components/PythonPipelineStudio';
 import { FairDatasetView } from './components/FairDatasetView';
 import { AgentControlPanel } from './components/AgentControlPanel';
 import { SpotDetailDrawer } from './components/SpotDetailDrawer';
+import { PeriodicTableSelector } from './components/PeriodicTableSelector';
+import { generateCustomAlloyLibrary } from './data/defaultLibrary';
+import { PeriodicElement } from './data/periodicTable';
 import { generateFAIRJsonLd, generateCSVDataset, downloadTextFile } from './services/fairExporter';
 import { generateGcodeForLibrary, downloadGcodeFile } from './services/gcodeCompiler';
 import { Download, FileText, CheckCircle2, Bot, Layers, Sparkles } from 'lucide-react';
@@ -22,15 +26,26 @@ import { Download, FileText, CheckCircle2, Bot, Layers, Sparkles } from 'lucide-
 export default function App() {
   const [library, setLibrary] = useState<MaterialLibrary>(createQuaternaryElectrocatalystLibrary);
   const [selectedSpot, setSelectedSpot] = useState<SampleSpot>(library.spots[0]);
-  const [activeTab, setActiveTab] = useState<'matrix' | 'printer' | 'characterization' | 'python' | 'fair'>('matrix');
+  const [activeTab, setActiveTab] = useState<'periodic' | 'matrix' | 'printer' | 'characterization' | 'python' | 'fair'>('periodic');
   const [drawerSpot, setDrawerSpot] = useState<SampleSpot | null>(null);
   const [isQCRunning, setIsQCRunning] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPeriodicTableOpen, setIsPeriodicTableOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [synthesisLogs, setSynthesisLogs] = useState<SynthesisLogEntry[]>(createInitialSynthesisHistory);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const addSynthesisLog = (entry: Omit<SynthesisLogEntry, 'id' | 'timestamp'>) => {
+    const newLog: SynthesisLogEntry = {
+      ...entry,
+      id: `LOG-${String(synthesisLogs.length + 1).padStart(3, '0')}`,
+      timestamp: new Date().toISOString(),
+    };
+    setSynthesisLogs((prev) => [newLog, ...prev]);
   };
 
   // Update a spot's QC verdict & realizability label
@@ -59,11 +74,38 @@ export default function App() {
       });
       return { ...prev, spots: updatedSpots, updatedAt: new Date().toISOString() };
     });
+
+    addSynthesisLog({
+      agentRole: 'Human Scientist',
+      actionCategory: 'qc',
+      actionType: 'qc_override',
+      spotId,
+      title: `Human Scientist QC Sign-off: ${status.toUpperCase()} (${label.replace(/_/g, ' ')})`,
+      detail: notes || `Scientist updated QC verdict to ${status} with realizability classification ${label}.`,
+      metrics: {
+        verdict: status.toUpperCase(),
+        label,
+      },
+      status: status === 'approved' ? 'optimal' : 'alert',
+    });
+
     showToast(`Committed human sign-off for ${spotId}`);
   };
 
   // Add or merge newly proposed AI candidate compositions
   const handleAddNewCandidates = (candidates: any[], rationale: string) => {
+    addSynthesisLog({
+      agentRole: 'Candidate Scout',
+      actionCategory: 'scout',
+      actionType: 'candidate_proposal',
+      title: `AI Candidate Scout: ${candidates.length} Compositions Proposed`,
+      detail: rationale || 'Evaluated quaternary d-band mixing enthalpies and generated Pareto-optimal targets.',
+      metrics: {
+        candidatesCount: candidates.length,
+        model: 'Gemini 3.8 Flash',
+      },
+      status: 'optimal',
+    });
     showToast(`Candidate Scout generated ${candidates.length} new stoichiometries!`);
   };
 
@@ -72,8 +114,53 @@ export default function App() {
     setIsQCRunning(true);
     setTimeout(() => {
       setIsQCRunning(false);
+      addSynthesisLog({
+        agentRole: 'Metrology QC',
+        actionCategory: 'qc',
+        actionType: 'qc_evaluation',
+        spotId: 'Library-wide',
+        title: 'Batch Metrology & Realizability Automated Scan',
+        detail: 'Re-evaluated micro-XRF composition deviations and SEM radial segregation across all 64 coordinates.',
+        metrics: {
+          totalScanned: 64,
+          optimalCount: library.spots.filter((s) => s.realizabilityLabel === 'synthesizable_optimal').length,
+          partialCount: library.spots.filter(
+            (s) => s.realizabilityLabel === 'partial_segregated_ring' || s.realizabilityLabel === 'partial_microcracked'
+          ).length,
+        },
+        status: 'optimal',
+      });
       showToast('Agent Metrology & Realizability scan completed for all 64 spots.');
     }, 1200);
+  };
+
+  // Synthesize new combinatorial library from periodic table element selection
+  const handleSynthesizeNewAlloy = (selectedElements: PeriodicElement[]) => {
+    try {
+      const newLib = generateCustomAlloyLibrary(selectedElements);
+      setLibrary(newLib);
+      setSelectedSpot(newLib.spots[0]);
+      setIsPeriodicTableOpen(false);
+
+      const formula = selectedElements.map((e) => e.symbol).join('-');
+      addSynthesisLog({
+        agentRole: 'Candidate Scout',
+        actionCategory: 'scout',
+        actionType: 'candidate_proposal',
+        title: `Alloy Library Formulated: ${formula} (64 spots)`,
+        detail: `Formulated systematic 8×8 combinatorial gradient library for ${formula} system using standard 118-element periodic reference library. Target stoichiometry, simulated printing recipes, and micro-XRF spectra generated.`,
+        metrics: {
+          elements: formula,
+          spotsCount: 64,
+          blocks: [...new Set(selectedElements.map((e) => e.block))].join(','),
+        },
+        status: 'optimal',
+      });
+
+      showToast(`Formulated 64-spot ${formula} library! Ready for printing & characterization.`);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to generate library');
+    }
   };
 
   return (
@@ -84,6 +171,7 @@ export default function App() {
         onSelectTab={setActiveTab}
         library={library}
         onOpenExportModal={() => setIsExportModalOpen(true)}
+        onOpenPeriodicTable={() => setIsPeriodicTableOpen(true)}
         onRunGlobalQC={handleRunGlobalQC}
         isQCRunning={isQCRunning}
       />
@@ -91,6 +179,19 @@ export default function App() {
       {/* 2. Main Content Canvas */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Module Content */}
+        {activeTab === 'periodic' && (
+          <PeriodicTableSelector
+            isOpen={true}
+            embedded={true}
+            onClose={() => setActiveTab('matrix')}
+            currentElements={library.elements || ['Pt', 'Pd', 'Ni', 'Co']}
+            onSynthesizeLibrary={(elements) => {
+              handleSynthesizeNewAlloy(elements);
+              setActiveTab('matrix');
+            }}
+          />
+        )}
+
         {activeTab === 'matrix' && (
           <LibraryMatrixView
             library={library}
@@ -144,8 +245,13 @@ export default function App() {
           <AgentControlPanel
             library={library}
             selectedSpot={selectedSpot}
+            synthesisLogs={synthesisLogs}
             onUpdateSpotQC={handleUpdateSpotQC}
             onAddNewCandidates={handleAddNewCandidates}
+            onSelectSpotId={(spotId) => {
+              const spot = library.spots.find((s) => s.id === spotId);
+              if (spot) setSelectedSpot(spot);
+            }}
           />
         </section>
       </main>
@@ -240,7 +346,17 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. Clean Toast Notification */}
+      {/* 6. Standard 118-Element Periodic Table Selector Modal */}
+      {activeTab !== 'periodic' && (
+        <PeriodicTableSelector
+          isOpen={isPeriodicTableOpen}
+          onClose={() => setIsPeriodicTableOpen(false)}
+          currentElements={library.elements || ['Pt', 'Pd', 'Ni', 'Co']}
+          onSynthesizeLibrary={handleSynthesizeNewAlloy}
+        />
+      )}
+
+      {/* 7. Clean Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-lg shadow-xl border border-slate-800 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />

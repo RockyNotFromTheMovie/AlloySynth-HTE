@@ -4,22 +4,27 @@
  */
 
 import React, { useState } from 'react';
-import { MaterialLibrary, SampleSpot, RealizabilityLabel } from '../types/materials';
+import { MaterialLibrary, SampleSpot, RealizabilityLabel, SynthesisLogEntry } from '../types/materials';
 import { scoutCandidateCompositions, inspectSampleWithAgents, AgentRecommendation } from '../services/geminiAgents';
 import { Sparkles, Bot, CheckCircle, AlertTriangle, Send, ShieldCheck, UserCheck } from 'lucide-react';
+import { SynthesisHistory } from './SynthesisHistory';
 
 interface AgentControlPanelProps {
   library: MaterialLibrary;
   selectedSpot: SampleSpot;
+  synthesisLogs: SynthesisLogEntry[];
   onUpdateSpotQC: (spotId: string, status: 'approved' | 'rejected', label: RealizabilityLabel, notes: string) => void;
   onAddNewCandidates: (candidates: any[], rationale: string) => void;
+  onSelectSpotId?: (spotId: string) => void;
 }
 
 export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({
   library,
   selectedSpot,
+  synthesisLogs,
   onUpdateSpotQC,
   onAddNewCandidates,
+  onSelectSpotId,
 }) => {
   const [objectivePrompt, setObjectivePrompt] = useState('Explore quaternary high-entropy compositions with Pt < 30% and enhanced Ni-Co synergy for acidic ORR');
   const [isScouting, setIsScouting] = useState(false);
@@ -53,9 +58,12 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({
     }
   };
 
+  const [committedFeedback, setCommittedFeedback] = useState<string | null>(null);
+
   const handleApplyQCSignoff = () => {
     onUpdateSpotQC(selectedSpot.id, manualStatus, manualLabel, manualNotes);
-    alert(`Human-in-the-loop signoff committed for ${selectedSpot.id}!`);
+    setCommittedFeedback(`Sign-off recorded for ${selectedSpot.id}`);
+    setTimeout(() => setCommittedFeedback(null), 3000);
   };
 
   return (
@@ -179,10 +187,23 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({
 
           <button
             onClick={handleApplyQCSignoff}
-            className="w-full py-1.5 text-xs font-semibold text-slate-800 bg-white hover:bg-slate-100 border border-slate-300 rounded-md transition-colors shadow-2xs flex items-center justify-center gap-1.5"
+            className={`w-full py-1.5 text-xs font-semibold rounded-md transition-colors shadow-2xs flex items-center justify-center gap-1.5 border ${
+              committedFeedback
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'text-slate-800 bg-white hover:bg-slate-100 border-slate-300'
+            }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Commit Human Scientist Sign-Off</span>
+            {committedFeedback ? (
+              <>
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{committedFeedback}</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Commit Human Scientist Sign-Off</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -221,6 +242,15 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({
           </div>
         </div>
       )}
+
+      {/* Synthesis History Chronological Log */}
+      <div className="pt-2">
+        <SynthesisHistory
+          logs={synthesisLogs}
+          selectedSpot={selectedSpot}
+          onSelectSpotId={onSelectSpotId}
+        />
+      </div>
     </div>
   );
 };

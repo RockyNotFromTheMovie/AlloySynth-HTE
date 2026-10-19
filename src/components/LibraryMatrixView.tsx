@@ -5,13 +5,14 @@
 
 import React, { useState } from 'react';
 import { MaterialLibrary, SampleSpot, RealizabilityLabel } from '../types/materials';
-import { Layers, Activity, AlertTriangle, CheckCircle, Crosshair, Sparkles } from 'lucide-react';
+import { Layers, Activity, AlertTriangle, CheckCircle, Crosshair, Sparkles, FlaskConical } from 'lucide-react';
 
 interface LibraryMatrixViewProps {
   library: MaterialLibrary;
   selectedSpot: SampleSpot;
   onSelectSpot: (spot: SampleSpot) => void;
   onOpenSpotDrawer: (spot: SampleSpot) => void;
+  onOpenPeriodicTable?: () => void;
 }
 
 export type HeatmapMode = 'composition' | 'overpotential' | 'xrf_deviation' | 'realizability';
@@ -21,6 +22,7 @@ export const LibraryMatrixView: React.FC<LibraryMatrixViewProps> = ({
   selectedSpot,
   onSelectSpot,
   onOpenSpotDrawer,
+  onOpenPeriodicTable,
 }) => {
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>('composition');
   const [hoveredSpot, setHoveredSpot] = useState<SampleSpot | null>(null);
@@ -205,6 +207,18 @@ export const LibraryMatrixView: React.FC<LibraryMatrixViewProps> = ({
                 Negative
               </button>
             </div>
+
+            {/* Quick Periodic Table Reference Trigger */}
+            {onOpenPeriodicTable && (
+              <button
+                onClick={onOpenPeriodicTable}
+                className="px-2.5 py-1 text-xs font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-md transition-colors flex items-center gap-1.5 shadow-2xs"
+                title="Formulate new alloy system with 118-element periodic library"
+              >
+                <FlaskConical className="w-3.5 h-3.5 text-sky-700" />
+                <span>118 Elements</span>
+              </button>
+            )}
           </div>
 
           {/* Wafer Platen Container */}
@@ -334,69 +348,43 @@ export const LibraryMatrixView: React.FC<LibraryMatrixViewProps> = ({
                 <span>Target vs Micro-XRF</span>
               </div>
 
-              {/* Pt */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="font-semibold text-sky-800">Pt (Platinum)</span>
-                  <span className="tabular-nums">
-                    Target: {(activeHover.targetComposition.pt * 100).toFixed(1)}% · XRF: {(activeHover.xrf.measuredComposition.pt * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-sky-600 rounded-full"
-                    style={{ width: `${activeHover.targetComposition.pt * 100}%` }}
-                  />
-                </div>
-              </div>
+              {(() => {
+                const activeElements = library.elements && library.elements.length > 0
+                  ? library.elements
+                  : ['Pt', 'Pd', 'Ni', 'Co'];
 
-              {/* Pd */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="font-semibold text-amber-800">Pd (Palladium)</span>
-                  <span className="tabular-nums">
-                    Target: {(activeHover.targetComposition.pd * 100).toFixed(1)}% · XRF: {(activeHover.xrf.measuredComposition.pd * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-500 rounded-full"
-                    style={{ width: `${activeHover.targetComposition.pd * 100}%` }}
-                  />
-                </div>
-              </div>
+                const colorThemes = [
+                  { text: 'text-sky-800', bar: 'bg-sky-600' },
+                  { text: 'text-amber-800', bar: 'bg-amber-500' },
+                  { text: 'text-emerald-800', bar: 'bg-emerald-500' },
+                  { text: 'text-purple-800', bar: 'bg-purple-500' },
+                  { text: 'text-rose-800', bar: 'bg-rose-500' },
+                ];
 
-              {/* Ni */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="font-semibold text-emerald-800">Ni (Nickel)</span>
-                  <span className="tabular-nums">
-                    Target: {(activeHover.targetComposition.ni * 100).toFixed(1)}% · XRF: {(activeHover.xrf.measuredComposition.ni * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full"
-                    style={{ width: `${activeHover.targetComposition.ni * 100}%` }}
-                  />
-                </div>
-              </div>
+                return activeElements.map((symbol, idx) => {
+                  const key = symbol.toLowerCase();
+                  const tgt = (activeHover.targetComposition[key] ?? activeHover.targetComposition[symbol] ?? 0) * 100;
+                  const meas = (activeHover.xrf.measuredComposition[key] ?? activeHover.xrf.measuredComposition[symbol] ?? 0) * 100;
+                  const theme = colorThemes[idx % colorThemes.length];
 
-              {/* Co */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="font-semibold text-purple-800">Co (Cobalt)</span>
-                  <span className="tabular-nums">
-                    Target: {(activeHover.targetComposition.co * 100).toFixed(1)}% · XRF: {(activeHover.xrf.measuredComposition.co * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-purple-500 rounded-full"
-                    style={{ width: `${activeHover.targetComposition.co * 100}%` }}
-                  />
-                </div>
-              </div>
+                  return (
+                    <div key={symbol}>
+                      <div className="flex justify-between text-xs font-mono mb-1">
+                        <span className={`font-semibold ${theme.text}`}>{symbol}</span>
+                        <span className="tabular-nums">
+                          Target: {tgt.toFixed(1)}% · XRF: {meas.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${theme.bar} rounded-full`}
+                          style={{ width: `${Math.min(100, tgt)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Performance & Quality Metrics Grid */}
